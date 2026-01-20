@@ -17,12 +17,14 @@ export async function requireAuth() {
 
 export async function requireTeamLead() {
   const user = await requireAuth();
-  if (user.role !== 'team_lead') {
+  // Admin has full access (equivalent to old team_lead)
+  if ((user as any).role !== 'admin') {
     redirect('/dashboard');
   }
   return user;
 }
 
-export function canEdit(userRole: 'team_lead' | 'senior_member'): boolean {
-  return userRole === 'team_lead';
+export function canEdit(userRole: 'admin' | 'manager' | 'member'): boolean {
+  // Admin and manager can edit, member cannot
+  return userRole === 'admin' || userRole === 'manager';
 }
