@@ -19,7 +19,10 @@ async function connectDB() {
   const MONGODB_URI = process.env.MONGODB_URI;
 
   if (!MONGODB_URI) {
-    throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
+    // Don't throw error during build - only throw at runtime
+    if (process.env.NODE_ENV !== 'production' || process.env.VERCEL_ENV) {
+      throw new Error('Please define the MONGODB_URI environment variable inside .env.local or Vercel environment variables');
+    }
   }
 
   if (cached.conn) {
