@@ -5,6 +5,7 @@ interface DashboardCardsProps {
   totalExpenses: number;
   netProfit: number;
   activeProjectsCount: number;
+  currency?: string;
 }
 
 export default function DashboardCards({
@@ -12,11 +13,12 @@ export default function DashboardCards({
   totalExpenses,
   netProfit,
   activeProjectsCount,
+  currency = 'USD',
 }: DashboardCardsProps) {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency: currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);

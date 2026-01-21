@@ -4,6 +4,7 @@ import Navigation from "@/components/Navigation";
 import { SessionProvider } from "@/components/SessionProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import SplashScreen from "@/components/SplashScreen";
+import ToastContainer from "@/components/Toast";
 
 export const metadata: Metadata = {
   title: "FreeloLedger - Company Finance Tracker",
@@ -35,6 +36,7 @@ export default function RootLayout({
               <main className="mobile-nav-spacing w-full md:ml-72 md:w-[calc(100%-18rem)] overflow-x-hidden">
                 {children}
               </main>
+              <ToastContainer />
             </div>
           </SessionProvider>
         </ThemeProvider>

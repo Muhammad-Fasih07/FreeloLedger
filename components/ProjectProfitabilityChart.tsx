@@ -5,6 +5,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recha
 interface ProjectData {
   projectId: string;
   projectName: string;
+  currency?: string;
   income: number;
   expenses: number;
   profit: number;
@@ -17,10 +18,13 @@ interface ProjectProfitabilityChartProps {
 const COLORS = ['#0B63FF', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
 export default function ProjectProfitabilityChart({ data }: ProjectProfitabilityChartProps) {
-  const formatCurrency = (value: number) => {
+  // Get the most common currency from projects, or default to USD
+  const getCurrency = (projectData: ProjectData) => projectData.currency || 'USD';
+  
+  const formatCurrency = (value: number, currency: string = 'USD') => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency: currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value);
@@ -32,6 +36,7 @@ export default function ProjectProfitabilityChart({ data }: ProjectProfitability
       : item.projectName,
     value: item.profit,
     fullName: item.projectName,
+    currency: getCurrency(item),
     income: item.income,
     expenses: item.expenses,
     color: COLORS[index % COLORS.length],
@@ -40,12 +45,13 @@ export default function ProjectProfitabilityChart({ data }: ProjectProfitability
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
+      const currency = data.currency || 'USD';
       return (
         <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
           <p className="font-semibold text-gray-900 dark:text-gray-100">{data.fullName}</p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Profit: {formatCurrency(data.value)}</p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Income: {formatCurrency(data.income)}</p>
-          <p className="text-sm text-gray-600 dark:text-gray-400">Expenses: {formatCurrency(data.expenses)}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Profit: {formatCurrency(data.value, currency)}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Income: {formatCurrency(data.income, currency)}</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400">Expenses: {formatCurrency(data.expenses, currency)}</p>
         </div>
       );
     }

@@ -13,6 +13,8 @@ import Link from 'next/link';
 import { PlusIcon } from '@heroicons/react/24/outline';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const runtime = 'nodejs';
 
 interface DashboardPageProps {
   searchParams: { month?: string; year?: string };
@@ -82,6 +84,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             totalExpenses={data.totalExpenses}
             netProfit={data.netProfit}
             activeProjectsCount={data.activeProjectsCount}
+            currency={data.defaultCurrency || 'USD'}
           />
 
           {/* Projects Section */}
@@ -115,12 +118,21 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
                 {projects.map((project: any) => (
-                  <EnhancedProjectCard 
-                    key={project._id} 
-                    project={project}
-                    currentMonth={month}
-                    currentYear={year}
-                  />
+                  <Suspense 
+                    key={project._id || project.id}
+                    fallback={
+                      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-4 animate-pulse">
+                        <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-2"></div>
+                        <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+                      </div>
+                    }
+                  >
+                    <EnhancedProjectCard 
+                      project={project}
+                      currentMonth={month}
+                      currentYear={year}
+                    />
+                  </Suspense>
                 ))}
               </div>
             )}
@@ -132,7 +144,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               <h3 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 Income vs Expenses (6 Months)
               </h3>
-              <IncomeExpenseChart data={data.trendData} />
+              <IncomeExpenseChart data={data.trendData} currency={data.defaultCurrency || 'USD'} />
             </div>
 
             <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 border border-gray-200 dark:border-gray-700">
@@ -155,7 +167,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               <h3 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 Team Payout Distribution
               </h3>
-              <TeamPayoutDistributionChart data={data.teamPayoutDistribution} />
+              <TeamPayoutDistributionChart data={data.teamPayoutDistribution} currency={data.defaultCurrency || 'USD'} />
             </div>
           )}
         </div>

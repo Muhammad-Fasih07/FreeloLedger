@@ -8,6 +8,11 @@ import TeamMember from '@/models/TeamMember';
 import { getCurrentCompanyId } from '@/lib/utils/server-auth';
 import mongoose from 'mongoose';
 
+// Ensure TeamMember model is registered before use
+if (mongoose.models.TeamMember === undefined) {
+  require('@/models/TeamMember');
+}
+
 export async function getDashboardData(month: number, year: number) {
   try {
     await connectDB();
@@ -87,13 +92,27 @@ export async function getDashboardData(month: number, year: number) {
         (e) => e._id.toString() === item._id.toString()
       )?.expenses || 0;
       return {
-        projectId: item._id,
+        projectId: item._id.toString(), // Convert ObjectId to string
         projectName: item.project.name,
+        currency: item.project.currency || 'USD', // Include currency
         income: item.income,
         expenses,
         profit: item.income - expenses,
       };
     });
+
+    // Get the most common currency from projects (for dashboard summary cards)
+    const allProjects = await Project.find({ companyId }).select('currency').lean();
+    const currencyCounts: Record<string, number> = {};
+    allProjects.forEach((p: any) => {
+      const curr = p.currency || 'USD';
+      currencyCounts[curr] = (currencyCounts[curr] || 0) + 1;
+    });
+    const defaultCurrency = Object.keys(currencyCounts).length > 0
+      ? Object.keys(currencyCounts).reduce((a, b) => 
+          currencyCounts[a] > currencyCounts[b] ? a : b
+        )
+      : 'USD';
 
     // Get monthly income/expense trend (last 6 months)
     const months = [];
@@ -161,6 +180,8 @@ export async function getDashboardData(month: number, year: number) {
     const teamPayoutData = teamPayouts.map((item) => ({
       name: item.teamMember.name,
       amount: item.total,
+      // Ensure all ObjectIds are converted to strings
+      _id: item._id?.toString(),
     }));
 
     return {
@@ -173,6 +194,7 @@ export async function getDashboardData(month: number, year: number) {
         projectProfitability: projectData,
         trendData,
         teamPayoutDistribution: teamPayoutData,
+        defaultCurrency, // Include default currency for dashboard cards
       },
     };
   } catch (error: any) {
@@ -186,13 +208,19 @@ export async function getProjectDetails(projectId: string, month?: number, year?
     await connectDB();
     const companyId = await getCurrentCompanyId();
 
-    const project = await Project.findOne({ _id: projectId, companyId }).lean();
+    // Convert projectId to ObjectId if it's a string
+    const projectObjectId = typeof projectId === 'string' 
+      ? new mongoose.Types.ObjectId(projectId) 
+      : projectId;
+
+    const project = await Project.findOne({ _id: projectObjectId, companyId }).lean();
     if (!project) {
+      console.error('Project not found:', { projectId, companyId });
       return { success: false, error: 'Project not found' };
     }
 
     // Get all payments for this project
-    const paymentsQuery: any = { companyId, projectId: new mongoose.Types.ObjectId(projectId) };
+    const paymentsQuery: any = { companyId, projectId: projectObjectId };
     if (month && year) {
       paymentsQuery.month = month;
       paymentsQuery.year = year;
@@ -202,15 +230,19 @@ export async function getProjectDetails(projectId: string, month?: number, year?
       .sort({ date: -1 })
       .lean();
 
-    // Get all expenses for this project
-    const expensesQuery: any = { companyId, projectId: new mongoose.Types.ObjectId(projectId) };
-    if (month && year) {
-      expensesQuery.month = month;
-      expensesQuery.year = year;
-    }
+    // Get all expenses for this project (for expense breakdown, we want all expenses, not filtered by month)
+    const expensesQuery: any = { companyId, projectId: projectObjectId };
+    
+    // Ensure TeamMember model is registered before populating
+    // Access the model to ensure it's registered
+    const TeamMemberModel = mongoose.models.TeamMember || TeamMember;
     
     const expenses = await Expense.find(expensesQuery)
-      .populate('teamMemberId', 'name role')
+      .populate({
+        path: 'teamMemberId',
+        model: TeamMemberModel,
+        select: 'name role'
+      })
       .sort({ date: -1 })
       .lean();
 
@@ -220,10 +252,10 @@ export async function getProjectDetails(projectId: string, month?: number, year?
     const netProfit = totalReceived - totalExpenses;
     const remaining = (project.totalBudget || 0) - totalReceived;
 
-    // Monthly breakdown
-    const monthlyBreakdown = await Payment.aggregate([
+    // Monthly breakdown - convert to plain objects
+    const monthlyBreakdownRaw = await Payment.aggregate([
       {
-        $match: { companyId, projectId: new mongoose.Types.ObjectId(projectId) },
+        $match: { companyId, projectId: projectObjectId },
       },
       {
         $group: {
@@ -235,13 +267,18 @@ export async function getProjectDetails(projectId: string, month?: number, year?
         $sort: { '_id.year': 1, '_id.month': 1 },
       },
     ]);
+    const monthlyBreakdown = monthlyBreakdownRaw.map(item => ({
+      month: item._id.month,
+      year: item._id.year,
+      total: item.total,
+    }));
 
     // Team member payouts for this project
     const teamPayouts = await Expense.aggregate([
       {
         $match: {
           companyId,
-          projectId: new mongoose.Types.ObjectId(projectId),
+          projectId: projectObjectId,
           type: 'team',
         },
       },
@@ -268,16 +305,16 @@ export async function getProjectDetails(projectId: string, month?: number, year?
     return {
       success: true,
       data: {
-        project,
-        payments,
-        expenses,
+        project: JSON.parse(JSON.stringify(project)),
+        payments: JSON.parse(JSON.stringify(payments)),
+        expenses: JSON.parse(JSON.stringify(expenses)),
         totalReceived,
         totalExpenses,
         netProfit,
         remaining,
         monthlyBreakdown,
         teamPayouts: teamPayouts.map((tp) => ({
-          teamMemberId: tp._id,
+          teamMemberId: tp._id?.toString(),
           name: tp.teamMember.name,
           role: tp.teamMember.role,
           totalPaid: tp.total,
@@ -286,6 +323,7 @@ export async function getProjectDetails(projectId: string, month?: number, year?
       },
     };
   } catch (error: any) {
-    return { success: false, error: error.message };
+    console.error('Error in getProjectDetails:', error);
+    return { success: false, error: error.message || 'Failed to load project details' };
   }
 }

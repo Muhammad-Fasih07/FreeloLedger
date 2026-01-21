@@ -62,16 +62,23 @@ const colorClasses = {
 
 export default function Navigation() {
   const pathname = usePathname();
-  const { data: session } = useSession() as any;
+  const { data: session, status } = useSession() as any;
 
   // Don't show navigation on login/signup pages
   if (pathname === '/login' || pathname === '/signup') {
     return null;
   }
 
-  const handleLogout = () => {
-    signOut({ callbackUrl: '/login' });
+  const handleLogout = async () => {
+    try {
+      await signOut({ callbackUrl: '/login' });
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
+
+  // Show logout button if session exists or is loading (to avoid flicker)
+  const showLogout = status === 'authenticated' || (session && session.user);
 
   const getRoleLabel = (role: string) => {
     const roleMap: Record<string, string> = {
@@ -99,8 +106,8 @@ export default function Navigation() {
     <>
       {/* Mobile Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 md:hidden shadow-lg">
-        <div className="flex justify-around items-center h-20 px-2">
-          {navItems.map((item) => {
+        <div className="flex justify-around items-center h-20 px-1">
+          {navItems.slice(0, 5).map((item) => {
             const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
             const Icon = isActive ? item.iconSolid : item.icon;
             const colors = colorClasses[item.color as keyof typeof colorClasses];
@@ -110,17 +117,28 @@ export default function Navigation() {
                 key={item.href}
                 href={item.href}
                 className={clsx(
-                  'flex flex-col items-center justify-center flex-1 h-full transition-all duration-200 rounded-lg mx-1',
+                  'flex flex-col items-center justify-center flex-1 h-full transition-all duration-200 rounded-lg mx-0.5',
                   isActive
                     ? `${colors.active} shadow-sm scale-105`
                     : `${colors.hover} text-gray-600 dark:text-gray-400`
                 )}
               >
-                <Icon className={clsx('w-6 h-6 mb-1', isActive && 'scale-110')} />
+                <Icon className={clsx('w-5 h-5 mb-1', isActive && 'scale-110')} />
                 <span className={clsx('text-xs font-medium', isActive && 'font-semibold')}>{item.label}</span>
               </Link>
             );
           })}
+          {/* Logout Button on Mobile */}
+          {showLogout && (
+            <button
+              onClick={handleLogout}
+              className="flex flex-col items-center justify-center flex-1 h-full transition-all duration-200 rounded-lg mx-0.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 active:scale-95"
+              aria-label="Sign out"
+            >
+              <ArrowRightOnRectangleIcon className="w-5 h-5 mb-1" />
+              <span className="text-xs font-medium">Logout</span>
+            </button>
+          )}
         </div>
       </nav>
 

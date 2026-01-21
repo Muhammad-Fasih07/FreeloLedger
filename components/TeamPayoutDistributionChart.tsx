@@ -9,15 +9,16 @@ interface TeamPayoutData {
 
 interface TeamPayoutDistributionChartProps {
   data: TeamPayoutData[];
+  currency?: string;
 }
 
 const COLORS = ['#0B63FF', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#F97316'];
 
-export default function TeamPayoutDistributionChart({ data }: TeamPayoutDistributionChartProps) {
+export default function TeamPayoutDistributionChart({ data, currency = 'USD' }: TeamPayoutDistributionChartProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency: currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value);

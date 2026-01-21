@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { deletePayment } from '@/lib/actions/payments';
 import { TrashIcon } from '@heroicons/react/24/outline';
+import { showToast } from '@/components/Toast';
 
 export default function DeletePaymentButton({ paymentId }: { paymentId: string }) {
   const router = useRouter();
@@ -27,12 +28,15 @@ export default function DeletePaymentButton({ paymentId }: { paymentId: string }
     try {
       const result = await deletePayment(paymentId);
       if (result.success) {
+        showToast('Payment deleted successfully!', 'success');
         router.refresh();
       } else {
-        alert('Error deleting payment: ' + result.error);
+        const errorMsg = result.error || 'Failed to delete payment';
+        showToast(errorMsg, 'error');
       }
     } catch (error: any) {
-      alert('Error deleting payment: ' + error.message);
+      const errorMsg = error.message || 'Failed to delete payment';
+      showToast(errorMsg, 'error');
     } finally {
       setIsDeleting(false);
     }

@@ -10,14 +10,34 @@ interface EnhancedProjectCardProps {
 }
 
 export default async function EnhancedProjectCard({ project, currentMonth, currentYear }: EnhancedProjectCardProps) {
-  const detailsResult = await getProjectDetails(project._id, currentMonth, currentYear);
-  
-  if (!detailsResult.success || !detailsResult.data) {
-    return null;
-  }
+  try {
+    // Ensure project._id is a string
+    const projectId = typeof project._id === 'object' ? project._id.toString() : project._id;
+    const detailsResult = await getProjectDetails(projectId, currentMonth, currentYear);
+    
+    if (!detailsResult.success || !detailsResult.data) {
+      console.error('Failed to load project details:', { 
+        projectId, 
+        error: detailsResult.error,
+        success: detailsResult.success 
+      });
+      // Return a minimal card instead of null so projects still show
+      return (
+        <Link
+          href={`/projects/${projectId}`}
+          className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 p-4 block hover:shadow-lg transition-shadow"
+        >
+          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">{project.name}</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{project.clientName}</p>
+          <p className="text-xs text-red-500 dark:text-red-400">
+            Unable to load details: {detailsResult.error || 'Unknown error'}
+          </p>
+        </Link>
+      );
+    }
 
-  const data = detailsResult.data; // TypeScript now knows data is defined
-  const currency = project.currency || 'USD';
+    const data = detailsResult.data; // TypeScript now knows data is defined
+    const currency = project.currency || 'USD';
   
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -46,95 +66,89 @@ export default async function EnhancedProjectCard({ project, currentMonth, curre
 
   return (
     <Link
-      href={`/projects/${project._id}`}
-      className="group bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-lg border border-gray-200 dark:border-gray-700 hover:shadow-2xl transition-all duration-300 block overflow-hidden transform hover:scale-[1.02] card-hover"
+      href={`/projects/${projectId}`}
+      className="group bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 hover:shadow-xl transition-all duration-300 block overflow-hidden transform hover:scale-[1.01]"
     >
-      {/* Header */}
-      <div className="bg-gradient-to-br from-blue-500/10 via-indigo-500/10 to-purple-500/10 dark:from-blue-900/30 dark:via-indigo-900/30 dark:to-purple-900/30 p-6 border-b border-gray-200 dark:border-gray-700 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl -mr-16 -mt-16"></div>
+      {/* Header - Compact */}
+      <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-4 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl -mr-12 -mt-12"></div>
         <div className="relative z-10">
-        <div className="flex items-start justify-between mb-3">
-          <div className="flex-1">
-            <h3 className="text-xl font-bold text-text-light dark:text-text-dark mb-1">{project.name}</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1">
-              <CurrencyDollarIcon className="w-4 h-4" />
-              {project.clientName}
-            </p>
+          <div className="flex items-start justify-between gap-2 mb-2">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-lg font-bold text-white mb-1 truncate">{project.name}</h3>
+              <p className="text-sm text-blue-100 flex items-center gap-1 truncate">
+                <CurrencyDollarIcon className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate">{project.clientName}</span>
+              </p>
+            </div>
+            <span className="px-2 py-1 text-xs font-semibold bg-white/20 backdrop-blur-sm text-white rounded-md flex-shrink-0">
+              {currency}
+            </span>
           </div>
-          <span className="px-3 py-1 text-xs font-semibold bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-full shadow-md">
-            {currency}
-          </span>
-        </div>
-        
-        {project.description && (
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 line-clamp-2">
-            {project.description}
-          </p>
-        )}
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="p-6">
-        {/* Budget & Progress */}
-        <div className="mb-6">
+      {/* Main Content - Better Spacing */}
+      <div className="p-4 space-y-4">
+        {/* Budget & Progress - Compact */}
+        <div>
           <div className="flex justify-between items-center mb-2">
-            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Budget</span>
-            <span className="text-lg font-bold text-text-light dark:text-text-dark">
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Total Budget</span>
+            <span className="text-base font-bold text-gray-900 dark:text-gray-100">
               {formatCurrency(project.totalBudget || 0)}
             </span>
           </div>
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mb-2 overflow-hidden shadow-inner">
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-1.5 overflow-hidden">
             <div
-              className="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 h-3 rounded-full transition-all duration-500 shadow-md"
+              className="bg-gradient-to-r from-blue-500 to-indigo-600 h-2 rounded-full transition-all duration-500"
               style={{ width: `${Math.min(progress, 100)}%` }}
             />
           </div>
           <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
             <span>{progress.toFixed(0)}% Complete</span>
-            <span>{formatCurrency(data.remaining)} Remaining</span>
+            <span className="truncate ml-2">{formatCurrency(data.remaining)} Remaining</span>
           </div>
         </div>
 
-        {/* Financial Summary */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4 border border-green-200 dark:border-green-800 shadow-sm hover:shadow-md transition-shadow">
-            <p className="text-xs font-semibold text-green-700 dark:text-green-300 mb-2 uppercase tracking-wide">Total Received</p>
-            <p className="text-xl font-bold text-green-700 dark:text-green-400">
+        {/* Financial Summary - Tighter Grid */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 border border-green-200 dark:border-green-800">
+            <p className="text-xs font-semibold text-green-700 dark:text-green-300 mb-1">Total Received</p>
+            <p className="text-lg font-bold text-green-700 dark:text-green-400 truncate">
               {formatCurrency(data.totalReceived)}
             </p>
           </div>
-          <div className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 rounded-xl p-4 border border-red-200 dark:border-red-800 shadow-sm hover:shadow-md transition-shadow">
-            <p className="text-xs font-semibold text-red-700 dark:text-red-300 mb-2 uppercase tracking-wide">Total Expenses</p>
-            <p className="text-xl font-bold text-red-700 dark:text-red-400">
+          <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 border border-red-200 dark:border-red-800">
+            <p className="text-xs font-semibold text-red-700 dark:text-red-300 mb-1">Total Expenses</p>
+            <p className="text-lg font-bold text-red-700 dark:text-red-400 truncate">
               {formatCurrency(data.totalExpenses)}
             </p>
           </div>
         </div>
 
-        {/* Monthly Breakdown */}
-        <div className="mb-6">
-          <div className="flex items-center gap-2 mb-3">
-            <CalendarIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-            <h4 className="text-sm font-semibold text-text-light dark:text-text-dark">
+        {/* Monthly Breakdown - Compact */}
+        <div className="bg-gray-50 dark:bg-gray-900/50 rounded-lg p-3">
+          <div className="flex items-center gap-1.5 mb-2.5">
+            <CalendarIcon className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+            <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300">
               {format(new Date(currentYear, currentMonth - 1, 1), 'MMMM yyyy')}
             </h4>
           </div>
-          <div className="space-y-2">
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-600 dark:text-gray-400">Received this month:</span>
+          <div className="space-y-1.5">
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-gray-600 dark:text-gray-400">Received:</span>
               <span className="font-semibold text-green-600 dark:text-green-400">
                 {formatCurrency(monthlyReceived)}
               </span>
             </div>
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-gray-600 dark:text-gray-400">Expenses this month:</span>
+            <div className="flex justify-between items-center text-xs">
+              <span className="text-gray-600 dark:text-gray-400">Expenses:</span>
               <span className="font-semibold text-red-600 dark:text-red-400">
                 {formatCurrency(monthlyExpenses)}
               </span>
             </div>
-            <div className="flex justify-between items-center text-sm pt-2 border-t border-gray-200 dark:border-gray-700">
-              <span className="font-medium text-gray-700 dark:text-gray-300">Net this month:</span>
+            <div className="flex justify-between items-center text-xs pt-1.5 border-t border-gray-200 dark:border-gray-700">
+              <span className="font-medium text-gray-700 dark:text-gray-300">Net:</span>
               <span className={`font-bold ${(monthlyReceived - monthlyExpenses) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                 {formatCurrency(monthlyReceived - monthlyExpenses)}
               </span>
@@ -142,22 +156,66 @@ export default async function EnhancedProjectCard({ project, currentMonth, curre
           </div>
         </div>
 
-        {/* Team Payouts */}
-        {data.teamPayouts.length > 0 && (
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <UserGroupIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-              <h4 className="text-sm font-semibold text-text-light dark:text-text-dark">Team Payouts</h4>
-            </div>
-            <div className="space-y-2">
-              {data.teamPayouts.map((tp: any) => (
-                <div key={tp.teamMemberId} className="flex justify-between items-center text-sm bg-gray-50 dark:bg-gray-800 rounded-lg p-2">
-                  <div>
-                    <p className="font-medium text-text-light dark:text-text-dark">{tp.name}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{tp.role}</p>
+        {/* Expense Breakdown by Type */}
+        {data.expenses && data.expenses.length > 0 && (
+          <div>
+            <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Expense Breakdown</h4>
+            <div className="space-y-1.5">
+              {(() => {
+                const expenseByType = data.expenses.reduce((acc: any, exp: any) => {
+                  const type = exp.type || 'misc';
+                  if (!acc[type]) acc[type] = 0;
+                  acc[type] += exp.amount;
+                  return acc;
+                }, {});
+                
+                const typeLabels: { [key: string]: string } = {
+                  team: 'Team Payouts',
+                  tools: 'Tools & Software',
+                  misc: 'Miscellaneous'
+                };
+                
+                const expenseTypes = Object.entries(expenseByType);
+                return expenseTypes.slice(0, 3).map(([type, amount]: [string, any]) => (
+                  <div key={type} className="flex justify-between items-center text-xs bg-white dark:bg-gray-800 rounded-md px-2 py-1.5 border border-gray-200 dark:border-gray-700">
+                    <span className="text-gray-600 dark:text-gray-400">{typeLabels[type] || type.charAt(0).toUpperCase() + type.slice(1)}</span>
+                    <span className="font-medium text-red-600 dark:text-red-400">{formatCurrency(amount)}</span>
                   </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-text-light dark:text-text-dark">
+                ));
+              })()}
+              {(() => {
+                const expenseTypes = data.expenses.reduce((acc: any, exp: any) => {
+                  const type = exp.type || 'misc';
+                  acc[type] = true;
+                  return acc;
+                }, {});
+                const typeCount = Object.keys(expenseTypes).length;
+                return typeCount > 3 && (
+                  <p className="text-xs text-gray-500 dark:text-gray-400 text-center pt-1">
+                    +{typeCount - 3} more expense type{typeCount - 3 !== 1 ? 's' : ''}
+                  </p>
+                );
+              })()}
+            </div>
+          </div>
+        )}
+
+        {/* Team Payouts - Compact */}
+        {data.teamPayouts && data.teamPayouts.length > 0 && (
+          <div>
+            <div className="flex items-center gap-1.5 mb-2">
+              <UserGroupIcon className="w-3.5 h-3.5 text-gray-500 dark:text-gray-400" />
+              <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300">Team Members Paid</h4>
+            </div>
+            <div className="space-y-1.5">
+              {data.teamPayouts.slice(0, 2).map((tp: any) => (
+                <div key={tp.teamMemberId} className="flex justify-between items-center text-xs bg-white dark:bg-gray-800 rounded-md p-2 border border-gray-200 dark:border-gray-700">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-gray-900 dark:text-gray-100 truncate">{tp.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{tp.role}</p>
+                  </div>
+                  <div className="text-right ml-2 flex-shrink-0">
+                    <p className="font-semibold text-gray-900 dark:text-gray-100">
                       {formatCurrency(tp.totalPaid)}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -166,34 +224,49 @@ export default async function EnhancedProjectCard({ project, currentMonth, curre
                   </div>
                 </div>
               ))}
+              {data.teamPayouts.length > 2 && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 text-center pt-1">
+                  +{data.teamPayouts.length - 2} more
+                </p>
+              )}
             </div>
           </div>
         )}
 
-        {/* Monthly Breakdown Summary */}
-        {data.monthlyBreakdown.length > 0 && (
+        {/* Payment History - Compact Scrollable */}
+        {data.monthlyBreakdown && data.monthlyBreakdown.length > 0 && (
           <div>
-            <h4 className="text-sm font-semibold text-text-light dark:text-text-dark mb-3">Payment History</h4>
-            <div className="space-y-1 max-h-32 overflow-y-auto">
-              {data.monthlyBreakdown.slice(-6).reverse().map((mb: any) => (
-                <div key={`${mb._id.year}-${mb._id.month}`} className="flex justify-between items-center text-xs bg-gray-50 dark:bg-gray-800 rounded px-2 py-1">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    {format(new Date(mb._id.year, mb._id.month - 1, 1), 'MMM yyyy')}
-                  </span>
-                  <span className="font-medium text-green-600 dark:text-green-400">
-                    {formatCurrency(mb.total)}
-                  </span>
-                </div>
-              ))}
+            <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">Payment History</h4>
+            <div className="space-y-1 max-h-24 overflow-y-auto pr-1">
+              {data.monthlyBreakdown.slice(-4).reverse().map((mb: any) => {
+                // Safety check for data structure
+                if (!mb) return null;
+                const year = mb.year || (mb._id && mb._id.year);
+                const month = mb.month || (mb._id && mb._id.month);
+                const total = mb.total || 0;
+                
+                if (!year || !month) return null;
+                
+                return (
+                  <div key={`${year}-${month}`} className="flex justify-between items-center text-xs bg-white dark:bg-gray-800 rounded-md px-2 py-1.5 border border-gray-200 dark:border-gray-700">
+                    <span className="text-gray-600 dark:text-gray-400">
+                      {format(new Date(year, month - 1, 1), 'MMM yyyy')}
+                    </span>
+                    <span className="font-medium text-green-600 dark:text-green-400">
+                      {formatCurrency(total)}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
 
-        {/* Net Profit */}
-        <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+        {/* Net Profit - Footer */}
+        <div className="pt-3 border-t border-gray-200 dark:border-gray-700">
           <div className="flex justify-between items-center">
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Net Profit:</span>
-            <span className={`text-xl font-bold ${data.netProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Net Profit</span>
+            <span className={`text-lg font-bold ${data.netProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
               {formatCurrency(data.netProfit)}
             </span>
           </div>
@@ -201,4 +274,8 @@ export default async function EnhancedProjectCard({ project, currentMonth, curre
       </div>
     </Link>
   );
+  } catch (error: any) {
+    console.error('Error rendering project card:', error);
+    return null;
+  }
 }

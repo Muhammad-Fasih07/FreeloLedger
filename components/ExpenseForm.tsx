@@ -1,9 +1,10 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { createExpense } from '@/lib/actions/expenses';
+import { showToast } from '@/components/Toast';
 
 interface ExpenseFormProps {
   month: number;
@@ -15,6 +16,7 @@ interface ExpenseFormProps {
 export default function ExpenseForm({ month, year, projects, teamMembers }: ExpenseFormProps) {
   const router = useRouter();
   const { data: session } = useSession();
+  const formRef = useRef<HTMLFormElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expenseType, setExpenseType] = useState<string>('misc');
@@ -54,21 +56,29 @@ export default function ExpenseForm({ month, year, projects, teamMembers }: Expe
       const result = await createExpense(formData);
 
       if (result.success) {
-        e.currentTarget.reset();
+        // Safe form reset
+        if (formRef.current) {
+          formRef.current.reset();
+        }
         setExpenseType('misc');
+        showToast('Expense added successfully!', 'success');
         router.refresh();
       } else {
-        setError(result.error || 'An error occurred');
+        const errorMsg = result.error || 'An error occurred';
+        setError(errorMsg);
+        showToast(errorMsg, 'error');
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      const errorMsg = err.message || 'An error occurred';
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
       {error && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
           <p className="text-red-800 dark:text-red-200 text-sm">{error}</p>

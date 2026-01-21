@@ -6,54 +6,71 @@ import { usePathname } from 'next/navigation';
 export default function SplashScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [mounted, setMounted] = useState(false);
+  const [hasShown, setHasShown] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
     setMounted(true);
+    
+    // Check if splash has been shown in this session
+    const splashShown = sessionStorage.getItem('splashShown');
+    if (splashShown === 'true') {
+      setHasShown(true);
+      setIsLoading(false);
+      return;
+    }
   }, []);
 
   useEffect(() => {
     if (!mounted) return;
 
-    // Don't show on auth pages (login/signup)
-    if (pathname === '/login' || pathname === '/signup') {
-      setIsLoading(false);
-      return;
-    }
-
-    // Hide splash screen after page load
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1500); // Show for 1.5 seconds
-
-    // Also hide when page is fully loaded
-    if (typeof window !== 'undefined' && document.readyState === 'complete') {
-      setIsLoading(false);
-    } else if (typeof window !== 'undefined') {
-      window.addEventListener('load', () => {
+    // Show splash screen on initial load (including login/signup pages)
+    if (!hasShown) {
+      const timer = setTimeout(() => {
         setIsLoading(false);
-      });
-    }
+        setHasShown(true);
+        sessionStorage.setItem('splashShown', 'true');
+      }, 2000); // Show for 2 seconds
 
-    return () => {
-      clearTimeout(timer);
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('load', () => setIsLoading(false));
+      // Also hide when page is fully loaded
+      if (typeof window !== 'undefined' && document.readyState === 'complete') {
+        setTimeout(() => {
+          setIsLoading(false);
+          setHasShown(true);
+          sessionStorage.setItem('splashShown', 'true');
+        }, 2000);
+      } else if (typeof window !== 'undefined') {
+        window.addEventListener('load', () => {
+          setTimeout(() => {
+            setIsLoading(false);
+            setHasShown(true);
+            sessionStorage.setItem('splashShown', 'true');
+          }, 2000);
+        });
       }
-    };
-  }, [mounted, pathname]);
+
+      return () => {
+        clearTimeout(timer);
+        if (typeof window !== 'undefined') {
+          window.removeEventListener('load', () => {
+            setIsLoading(false);
+            setHasShown(true);
+            sessionStorage.setItem('splashShown', 'true');
+          });
+        }
+      };
+    } else {
+      setIsLoading(false);
+    }
+  }, [mounted, hasShown]);
 
   // Don't render until mounted (SSR safety)
   if (!mounted) {
     return null;
   }
 
-  // Don't show on auth pages (login/signup)
-  if (pathname === '/login' || pathname === '/signup') {
-    return null;
-  }
-
-  if (!isLoading) {
+  // Don't show if already shown in this session
+  if (hasShown || !isLoading) {
     return null;
   }
 

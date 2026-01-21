@@ -22,18 +22,15 @@ const ExpenseSchema: Schema = new Schema(
       type: Schema.Types.ObjectId,
       ref: 'Company',
       required: true,
-      index: true,
     },
     projectId: {
       type: Schema.Types.ObjectId,
       ref: 'Project',
       required: [true, 'Project ID is required'],
-      index: true,
     },
     teamMemberId: {
       type: Schema.Types.ObjectId,
       ref: 'TeamMember',
-      index: true,
     },
     type: {
       type: String,

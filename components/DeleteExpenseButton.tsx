@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { deleteExpense } from '@/lib/actions/expenses';
 import { TrashIcon } from '@heroicons/react/24/outline';
+import { showToast } from '@/components/Toast';
 
 export default function DeleteExpenseButton({ expenseId }: { expenseId: string }) {
   const router = useRouter();
@@ -27,12 +28,15 @@ export default function DeleteExpenseButton({ expenseId }: { expenseId: string }
     try {
       const result = await deleteExpense(expenseId);
       if (result.success) {
+        showToast('Expense deleted successfully!', 'success');
         router.refresh();
       } else {
-        alert('Error deleting expense: ' + result.error);
+        const errorMsg = result.error || 'Failed to delete expense';
+        showToast(errorMsg, 'error');
       }
     } catch (error: any) {
-      alert('Error deleting expense: ' + error.message);
+      const errorMsg = error.message || 'Failed to delete expense';
+      showToast(errorMsg, 'error');
     } finally {
       setIsDeleting(false);
     }

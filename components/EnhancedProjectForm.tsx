@@ -1,9 +1,10 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { createProject, updateProject } from '@/lib/actions/projects';
+import { showToast } from '@/components/Toast';
 
 interface EnhancedProjectFormProps {
   project?: any;
@@ -127,6 +128,7 @@ const CURRENCIES = [
 export default function EnhancedProjectForm({ project }: EnhancedProjectFormProps) {
   const router = useRouter();
   const { data: session } = useSession();
+  const formRef = useRef<HTMLFormElement>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -155,24 +157,33 @@ export default function EnhancedProjectForm({ project }: EnhancedProjectFormProp
 
       if (result.success) {
         if (project) {
+          showToast('Project updated successfully!', 'success');
           router.push('/projects');
           router.refresh();
         } else {
-          e.currentTarget.reset();
+          // Safe form reset
+          if (formRef.current) {
+            formRef.current.reset();
+          }
+          showToast('Project created successfully!', 'success');
           router.refresh();
         }
       } else {
-        setError(result.error || 'An error occurred');
+        const errorMsg = result.error || 'An error occurred';
+        setError(errorMsg);
+        showToast(errorMsg, 'error');
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      const errorMsg = err.message || 'An error occurred';
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
       {error && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
           <p className="text-red-800 dark:text-red-200 text-sm">{error}</p>

@@ -7,6 +7,7 @@ import { revalidatePath } from 'next/cache';
 import { getCurrentUserId, requireAdmin, getCurrentCompanyId as getCompanyId } from '@/lib/utils/server-auth';
 import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
+import { sendInviteEmail } from '@/lib/utils/email';
 
 export async function createCompany(formData: FormData) {
   try {
@@ -57,11 +58,20 @@ export async function inviteUser(formData: FormData) {
       return { success: false, error: 'Email and role are required' };
     }
 
+    // Get company name for email
+    const company = await Company.findById(companyId).lean();
+    const companyName = company?.name || 'our company';
+
     // Check if user already exists
     const existingUser = await User.findOne({ email: email.toLowerCase() });
+    let tempPassword: string | null = null;
+
     if (existingUser) {
+      if (existingUser.companyId && existingUser.companyId.toString() === companyId.toString()) {
+        return { success: false, error: 'User is already a member of your company' };
+      }
       if (existingUser.companyId) {
-        return { success: false, error: 'User already belongs to a company' };
+        return { success: false, error: 'User already belongs to another company' };
       }
       // User exists but no company - update them
       await User.findByIdAndUpdate(existingUser._id, {
@@ -70,7 +80,7 @@ export async function inviteUser(formData: FormData) {
       });
     } else {
       // Create new user with temporary password
-      const tempPassword = Math.random().toString(36).slice(-12);
+      tempPassword = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12).toUpperCase();
       const passwordHash = await bcrypt.hash(tempPassword, 10);
       
       await User.create({
@@ -80,18 +90,33 @@ export async function inviteUser(formData: FormData) {
         companyId,
         role,
       });
-      
-      // TODO: Send email with invite link and temp password
-      // For now, return temp password (in production, send via email)
-      return { 
-        success: true, 
-        message: 'User invited successfully',
-        tempPassword, // Remove in production
-      };
+    }
+
+    // Send invite email (only for new users with temp password)
+    if (tempPassword) {
+      const emailResult = await sendInviteEmail(email, tempPassword, role, companyName);
+      if (!emailResult.success) {
+        // If email fails, still return success but log the error
+        console.error('Failed to send invite email:', emailResult.error);
+        // Return temp password in response if email failed (for manual sharing)
+        revalidatePath('/settings');
+        return { 
+          success: true, 
+          message: `User invited successfully. Email sending failed. Temporary password: ${tempPassword}`,
+          emailSent: false,
+          tempPassword, // Include temp password if email failed
+        };
+      }
     }
 
     revalidatePath('/settings');
-    return { success: true, message: 'User invited successfully' };
+    return { 
+      success: true, 
+      message: tempPassword 
+        ? 'User invited successfully! Invitation email sent.' 
+        : 'User added to your company successfully!',
+      emailSent: !!tempPassword,
+    };
   } catch (error: any) {
     return { success: false, error: error.message };
   }

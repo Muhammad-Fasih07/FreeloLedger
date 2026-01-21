@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { deleteTeamMember } from '@/lib/actions/team';
 import { TrashIcon } from '@heroicons/react/24/outline';
+import { showToast } from '@/components/Toast';
 
 export default function DeleteTeamMemberButton({ teamMemberId }: { teamMemberId: string }) {
   const router = useRouter();
@@ -27,12 +28,15 @@ export default function DeleteTeamMemberButton({ teamMemberId }: { teamMemberId:
     try {
       const result = await deleteTeamMember(teamMemberId);
       if (result.success) {
+        showToast('Team member deleted successfully!', 'success');
         router.refresh();
       } else {
-        alert('Error deleting team member: ' + result.error);
+        const errorMsg = result.error || 'Failed to delete team member';
+        showToast(errorMsg, 'error');
       }
     } catch (error: any) {
-      alert('Error deleting team member: ' + error.message);
+      const errorMsg = error.message || 'Failed to delete team member';
+      showToast(errorMsg, 'error');
     } finally {
       setIsDeleting(false);
     }

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { createTeamMember, updateTeamMember } from '@/lib/actions/team';
+import { showToast } from '@/components/Toast';
 
 interface TeamMemberFormProps {
   teamMember?: any;
@@ -51,6 +52,7 @@ export default function TeamMemberForm({ teamMember }: TeamMemberFormProps) {
 
       if (result.success) {
         if (teamMember) {
+          showToast('Team member updated successfully!', 'success');
           router.push('/team');
           router.refresh();
         } else {
@@ -65,13 +67,18 @@ export default function TeamMemberForm({ teamMember }: TeamMemberFormProps) {
             payoutAmount: '',
             payoutPercentage: '',
           });
+          showToast('Team member added successfully!', 'success');
           router.refresh();
         }
       } else {
-        setError(result.error || 'An error occurred');
+        const errorMsg = result.error || 'An error occurred';
+        setError(errorMsg);
+        showToast(errorMsg, 'error');
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred');
+      const errorMsg = err.message || 'An error occurred';
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
     } finally {
       setIsSubmitting(false);
     }

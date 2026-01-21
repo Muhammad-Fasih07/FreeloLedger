@@ -17,7 +17,6 @@ const TeamMemberSchema: Schema = new Schema(
       type: Schema.Types.ObjectId,
       ref: 'Company',
       required: true,
-      index: true,
     },
     name: {
       type: String,

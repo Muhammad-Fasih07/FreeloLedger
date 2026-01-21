@@ -10,13 +10,14 @@ interface TrendData {
 
 interface IncomeExpenseChartProps {
   data: TrendData[];
+  currency?: string;
 }
 
-export default function IncomeExpenseChart({ data }: IncomeExpenseChartProps) {
+export default function IncomeExpenseChart({ data, currency = 'USD' }: IncomeExpenseChartProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'USD',
+      currency: currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(value);

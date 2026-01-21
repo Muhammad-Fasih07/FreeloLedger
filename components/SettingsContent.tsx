@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { inviteUser, updateUserRole } from '@/lib/actions/company';
 import { useSession } from 'next-auth/react';
 import ThemeToggle from './ThemeToggle';
+import { showToast } from '@/components/Toast';
 
 interface User {
   _id: string;
@@ -40,12 +41,24 @@ export default function SettingsContent({ currentUser, users }: SettingsContentP
     const result = await inviteUser(formData);
     
     if (result.success) {
-      setSuccess(result.message || 'User invited successfully');
+      const message = result.message || 'User invited successfully';
+      setSuccess(message);
+      showToast(message, 'success');
       setInviteForm({ email: '', role: 'member' });
+      
+      // Show temp password if email wasn't sent
+      if ((result as any).tempPassword && !(result as any).emailSent) {
+        setTimeout(() => {
+          alert(`Email sending failed. Please share these login credentials manually:\n\nEmail: ${inviteForm.email}\nPassword: ${(result as any).tempPassword}\n\n⚠️ Tell them to change password after first login!`);
+        }, 500);
+      }
+      
       // Refresh page to show new user
-      window.location.reload();
+      setTimeout(() => window.location.reload(), 1500);
     } else {
-      setError(result.error || 'Failed to invite user');
+      const errorMsg = result.error || 'Failed to invite user';
+      setError(errorMsg);
+      showToast(errorMsg, 'error');
     }
     
     setIsInviting(false);

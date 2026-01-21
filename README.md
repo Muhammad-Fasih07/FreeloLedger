@@ -49,6 +49,14 @@ npm install
 MONGODB_URI=your_mongodb_connection_string
 NEXTAUTH_SECRET=your_nextauth_secret_key
 NEXTAUTH_URL=http://localhost:3000
+
+# Optional: Email Configuration (for team invites)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-email@gmail.com
+SMTP_PASSWORD=your-app-password
+NEXTAUTH_URL=http://localhost:3000
 ```
 
 4. Run the development server:
